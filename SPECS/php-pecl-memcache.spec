@@ -1,20 +1,22 @@
+%if 0%{?scl:1}
+%scl_package php-pecl-memcache
+%endif
+
 %{!?__pecl:     %{expand: %%global __pecl     %{_bindir}/pecl}}
 %{!?pecl_phpdir: %{expand: %%global pecl_phpdir  %(%{__pecl} config-get php_dir  2> /dev/null || echo undefined)}}
 %{?!pecl_xmldir: %{expand: %%global pecl_xmldir %{pecl_phpdir}/.pkgxml}}
 
-%{!?php_extdir: %{expand: %%global php_extdir %(php-config --extension-dir)}}
+%define php_extdir %(%{_bindir}/php-config --extension-dir 2>/dev/null || echo %{_libdir}/php4)
+#%{!?php_extdir: %{expand: %%global php_extdir %(%{_bindir}/php-config --extension-dir)}}
 %global php_apiver  %((echo 0; php -i 2>/dev/null | sed -n 's/^PHP API => //p') | tail -1)
 
 
 %global pecl_name memcache
-%global real_name php-pecl-memcache
-%global basever 3
-%global php_base php54
 
 Summary: Extension to work with the Memcached caching daemon
-Name: %{php_base}-pecl-memcache
+Name: %{?scl_prefix}php-pecl-memcache
 Version: 3.0.8
-Release: 1.ius%{?dist}
+Release: 2.ius%{?dist}
 License: PHP
 Group: Development/Languages
 Vendor: IUS Community Project
@@ -24,18 +26,16 @@ Source: http://pecl.php.net/get/%{pecl_name}-%{version}.tgz
 Source2: xml2changelog
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires: %{php_base}-devel, %{php_base}-cli, %{php_base}-pear, zlib-devel
-Provides: php-pecl(%{pecl_name}) = %{version}-%{release}
-Provides: %{real_name} = %{version}-%{release}
-Conflicts: %{real_name} < %{basever}
+BuildRequires: %{?scl_prefix}php-devel, %{?scl_prefix}php-cli, %{?scl_prefix}php-pear, zlib-devel
+Provides: %{?scl_prefix}php-pecl(%{pecl_name}) = %{version}-%{release}
 Requires(post): %{__pecl}
 Requires(postun): %{__pecl}
 
 %if %{?php_zend_api}0
-Requires: php(zend-abi) = %{php_zend_api}
-Requires: php(api) = %{php_core_api}
+Requires: %{?scl_prefix}php(zend-abi) = %{php_zend_api}
+Requires: %{?scl_prefix}php(api) = %{php_core_api}
 %else
-Requires: %{php_base}-api = %{php_apiver}
+Requires: %{?scl_prefix}php-api = %{php_apiver}
 %endif
 
 %description
@@ -49,14 +49,14 @@ handy OO and procedural interfaces.
 Memcache can be used as a PHP session handler.
 
 %prep 
-%setup -c -n %{real_name}-%{version} -q
+%setup -c -n %{name}-%{version} -q
 %{_bindir}/php -n %{SOURCE2} package.xml >CHANGELOG
 
 
 %build
 cd %{pecl_name}-%{version}
-phpize
-%configure
+%{_bindir}/phpize
+%configure --with-php-config=%{_bindir}/php-config
 %{__make} %{?_smp_mflags}
 
 
@@ -123,6 +123,10 @@ fi
 
 
 %changelog
+* Wed Jan 29 2014 Mark McKinstry <mmckinst@nexcess.net> - 3.0.8-2.ius
+- convert to SCL style RPM
+- give it the path to php-config
+
 * Mon Apr 08 2013 Ben Harper <ben.harper@rackspace.com> - 0:3.0.8-1.ius
 - Latest sources from upstream. Full changelog available at:
   http://pecl.php.net/package-changelog.php?package=memcache&release=3.0.8
